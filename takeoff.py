@@ -2,7 +2,6 @@ from dronekit import connect, VehicleMode, LocationGlobalRelative
 import time
 import threading
 
-# Global variable to control the loop
 stop_flag = False
 
 def arm_and_ask_for_takeoff(vehicle, target_altitude):
@@ -71,33 +70,22 @@ def ask_user_for_action(vehicle):
             print("Invalid input. Please enter 'stay' or 'land'.")
 
 if __name__ == "__main__":
-    # Replace 'COM5' with the correct port for your telemetry module
-    connection_string = 'COM5'  # Adjust as needed for your setup
+    connection_string = 'COM5' 
 
     try:
-        # Connect to the Vehicle
         print(f"Connecting to vehicle on: {connection_string}")
         vehicle = connect(connection_string, baud=57600, wait_ready=True)
-
-        # Display basic vehicle state
         print(" Type: %s" % vehicle._vehicle_type)
         print(" Armed: %s" % vehicle.armed)
         print(" System status: %s" % vehicle.system_status.state)
-
-        # Arm and ask for takeoff example
-        target_altitude = 1.6  # Set target altitude (in meters)
+        target_altitude = 1.6  
         arm_and_ask_for_takeoff(vehicle, target_altitude)
-
-        # Example: Monitor user input to stop or adjust commands
         user_input_thread = threading.Thread(target=monitor_user_input)
         user_input_thread.start()
 
-        # Example: Continue operations or control motor speeds as needed
         while not stop_flag:
-            # Adjust motor speeds or other parameters as needed
             time.sleep(1)
 
-        # Once stop_flag is set, ask user for action
         ask_user_for_action(vehicle)
 
     except Exception as e:

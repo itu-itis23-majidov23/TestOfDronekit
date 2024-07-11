@@ -1,8 +1,7 @@
 from dronekit import connect, VehicleMode
 import time
 
-# Replace 'COM5' with the correct port for your telemetry module
-connection_string = 'COM5'  # Adjust as needed for your setup
+connection_string = 'COM5'  
 
 def set_motor_speed(vehicle, motor_number, speed):
     """
@@ -10,47 +9,38 @@ def set_motor_speed(vehicle, motor_number, speed):
     motor_number: 1-4 for quadcopters
     speed: 0 to 1 (0% to 100%)
     """
-    # Define the channel mappings for motors
     motor_channels = {
-        1: '5',  # Motor 1
-        2: '6',  # Motor 2
-        3: '7',  # Motor 3
-        4: '8',  # Motor 4
+        1: '5',  
+        2: '6',  
+        3: '7',  
+        4: '8',  
     }
     
     if motor_number in motor_channels:
         channel = motor_channels[motor_number]
-        pwm_value = 1000 + int(speed * 1000)  # PWM value between 1000 (0%) and 2000 (100%)
+        pwm_value = 1000 + int(speed * 1000)  
         vehicle.channels.overrides[channel] = pwm_value
     else:
         print(f"Invalid motor number: {motor_number}")
 
 try:
-    # Connect to the Vehicle
     print(f"Connecting to vehicle on: {connection_string}")
     vehicle = connect(connection_string, baud=57600, wait_ready=True)
-
-    # Display basic vehicle state
     print(" Type: %s" % vehicle._vehicle_type)
     print(" Armed: %s" % vehicle.armed)
     print(" System status: %s" % vehicle.system_status.state)
-
-    # Arm the vehicle without waiting for GPS HDOP
     print("Arming motors...")
-    vehicle.mode = VehicleMode("GUIDED")  # Set mode to guided for arming
+    vehicle.mode = VehicleMode("GUIDED") 
 
-    # Wait for arming with a timeout
-    timeout = 30  # Timeout in seconds
+    timeout = 30 
     start_time = time.time()
     while not vehicle.armed:
         if time.time() - start_time > timeout:
             raise Exception("Timeout waiting for arming")
 
-        # Attempt to arm without GPS check
         vehicle.armed = True
-        time.sleep(1)  # Wait for a second to allow the vehicle to change state
+        time.sleep(1)  
 
-    # Vehicle is armed, perform operations here
     print("Vehicle armed and ready!")
 
     while True:
@@ -78,11 +68,9 @@ try:
         if disarm_input == 'yes':
             break
 
-    # Disarm the vehicle
     print("Disarming motors...")
     vehicle.armed = False
 
-    # Wait for disarming to complete
     while vehicle.armed:
         print(" Waiting for disarming...")
         time.sleep(1)
@@ -93,7 +81,6 @@ except Exception as e:
     print(f"Error: {e}")
 
 finally:
-    # Close vehicle object before exiting script
     if 'vehicle' in locals():
         vehicle.close()
         print("Connection closed")

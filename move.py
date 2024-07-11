@@ -2,7 +2,6 @@ from dronekit import connect, VehicleMode, LocationGlobalRelative
 import time
 import threading
 
-# Global variable to control the loop
 stop_flag = False
 
 def arm_and_takeoff(vehicle, target_altitude):
@@ -15,7 +14,6 @@ def arm_and_takeoff(vehicle, target_altitude):
         time.sleep(1)
 
     print("Vehicle armed and ready!")
-
     vehicle.simple_takeoff(target_altitude)
 
     while True:
@@ -109,13 +107,11 @@ def force_disarm(vehicle):
     try:
         print("Forcefully disarming motors...")
         vehicle.armed = False
-
-        # Attempt to force disarm by setting armed to False repeatedly
         attempt_count = 0
         while vehicle.armed:
             vehicle.armed = False
             attempt_count += 1
-            if attempt_count >= 3:  # Adjust the number of attempts as needed
+            if attempt_count >= 3: 
                 raise Exception("Failed to force disarm after multiple attempts")
             time.sleep(1)
 
@@ -131,28 +127,18 @@ def failsafe(vehicle):
     print("Failsafe mode activated. Vehicle is loitering.")
 
 if __name__ == "__main__":
-    # Replace 'COM5' with the correct port for your telemetry module
-    connection_string = 'COM5'  # Adjust as needed for your setup
+    connection_string = 'COM5'
 
     try:
-        # Connect to the Vehicle
         print(f"Connecting to vehicle on: {connection_string}")
         vehicle = connect(connection_string, baud=57600, wait_ready=True)
-
-        # Display basic vehicle state
         print(" Type: %s" % vehicle._vehicle_type)
         print(" Armed: %s" % vehicle.armed)
         print(" System status: %s" % vehicle.system_status.state)
-
-        # Example: Monitor user input to stop or adjust commands
         user_input_thread = threading.Thread(target=monitor_user_input)
         user_input_thread.start()
-
-        # Arm and takeoff example
-        target_altitude = 1.6  # Set target altitude (in meters)
+        target_altitude = 1.6  
         arm_and_takeoff(vehicle, target_altitude)
-
-        # Ask user if they want to move to a target
         ask_next_action(vehicle)
 
     except Exception as e:
