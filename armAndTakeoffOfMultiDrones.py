@@ -1,12 +1,20 @@
 from dronekit import connect, VehicleMode
 import time
 import string
+import serial.tools.list_ports
 
 
 drones = {}
 
+def list_serial_ports():
+    ports = serial.tools.list_ports.comports()
+    available_ports = [port.device for port in ports]
+    return available_ports
+
 def connect_drones():
-    ports = str(input('Enter the port(s) name(s): '))
+    available_ports = list_serial_ports()
+    print("Available serial ports:", available_ports)
+    ports = str(input('Enter the port name(s): '))
     ports = ports.replace(',', ' ').strip()
     serial_ports = ports.split()
     for i, port in enumerate(serial_ports):
