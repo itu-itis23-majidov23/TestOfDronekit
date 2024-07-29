@@ -1,30 +1,21 @@
 from dronekit import connect, VehicleMode
-import sys
 
-connection_string = 'COM5' 
+# Replace 'COM6' with the correct COM port and ensure the baud rate is correct
+connection_string = 'COM6'
+baud_rate = 57600
+
+print("Connecting to vehicle on:", connection_string)
+
 try:
-    print(f"Connecting to vehicle on: {connection_string}")
-    vehicle = connect(connection_string, baud=57600, wait_ready=True)
-    print(" Type: %s" % vehicle._vehicle_type)
-    print(" Armed: %s" % vehicle.armed)
-    print(" System status: %s" % vehicle.system_status.state)
-    print(" GPS: %s" % vehicle.gps_0)
-    print(" Altitude: %s" % vehicle.location.global_relative_frame.alt)
-
-    while True:
-        print("Latitude: %s" % vehicle.location.global_relative_frame.lat)
-        print("Longitude: %s" % vehicle.location.global_relative_frame.lon)
-        user_input = input("Press 'q' to disconnect: ")
-        if user_input.lower() == 'q':
-            break  
-
+    vehicle = connect(connection_string, baud=baud_rate, wait_ready=True)
+    print("Connected to vehicle")
 except Exception as e:
     print(f"Error connecting to vehicle: {e}")
-    sys.exit(1)
+    exit(1)
 
-finally:
-    if 'vehicle' in locals():
-        vehicle.close()
-        print("Connection closed")
+# Example to check the vehicle's mode
+print("Current vehicle mode:", vehicle.mode.name)
 
-print("Completed")
+# Close vehicle object
+vehicle.close()
+print("Connection closed")

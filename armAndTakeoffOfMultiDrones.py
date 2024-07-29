@@ -2,49 +2,65 @@ from dronekit import connect, VehicleMode
 import time
 
 
-serial_ports = ['COM5', 'COM6']
+serial_ports = ['COM6']
 drones = {}
 
 def connect_drones(serial_ports):
     for i, port in enumerate(serial_ports):
         try:
             print(f"Connecting to drone {i+1} on {port}...")
-            drones[i] = connect(port, baud=57600, timeout=200, wait_ready=True)
+            drones[i] = connect(port, baud=57600, timeout=1000, wait_ready=True)
             print(f"Drone {i+1} connected")
         except Exception as e:
             print(f"Failed to connect to drone {i+1} on {port}: {e}")
 
-def arm_and_takeoff(vehicle, target_altitude):
-    print("Arming motors...")
-
-    while not vehicle.is_armable:
-        print("Waiting for vehicle to become armable...")
-        time.sleep(1)
-
-    vehicle.mode = VehicleMode("GUIDED")
-    vehicle.armed = True
-
-    while not vehicle.armed:
-        print("Waiting for vehicle to arm...")
-        time.sleep(1)
-
+def takeoff(vehicle, target_altitude):
+    """
+    Command the drone to take off and wait until it reaches the target altitude.
+    
+    Args:
+    vehicle (Vehicle): The vehicle instance to command.
+    target_altitude (float): The altitude to reach in meters.
+    """
     print("Taking off...")
+    
+    # Initiate takeoff
     vehicle.simple_takeoff(target_altitude)
-
+    
+    # Wait until the drone reaches the target altitude
     while True:
-        print(f"Altitude: {vehicle.location.global_relative_frame.alt}")
-        if vehicle.location.global_relative_frame.alt >= target_altitude * 0.95:
+        altitude = vehicle.location.global_relative_frame.alt
+        print(f"Altitude: {altitude}")
+        if altitude >= target_altitude * 0.95:  # 95% of target altitude
             print("Reached target altitude")
             break
         time.sleep(1)
 
-def land_and_disarm(vehicle):
+def land(vehicle):
+    """
+    Command the drone to land and wait until it has landed.
+    
+    Args:
+    vehicle (Vehicle): The vehicle instance to command.
+    """
     print("Landing...")
+    
+    # Set the vehicle mode to LAND
     vehicle.mode = VehicleMode("LAND")
-    while vehicle.armed:
-        print("Waiting for vehicle to land and disarm...")
+    
+    # Wait until the vehicle is in LAND mode
+    while vehicle.mode.name != "LAND":
+        print("Waiting for landing mode...")
         time.sleep(1)
-    print("Disarmed.")
+    
+    # Wait until the vehicle is landed (altitude is approximately zero)
+    while vehicle.location.global_relative_frame.alt > 0.1:
+        print("Altitude:", vehicle.location.global_relative_frame.alt)
+        time.sleep(1)
+    
+    print("Landed")
+
+   
 
 def arm_drones(drones):
     for i, vehicle in drones.items():
@@ -107,7 +123,7 @@ def main():
             for i, vehicle in drones.items():
                 try:
                     print(f"Taking off drone {i+1}...")
-                    arm_and_takeoff(vehicle, target_altitude)
+                    takeoff(vehicle, target_altitude)
                 except Exception as e:
                     print(f"Failed to take off drone {i+1}: {e}")
             
@@ -118,7 +134,7 @@ def main():
                     for i, vehicle in drones.items():
                         try:
                             print(f"Landing drone {i+1}...")
-                            land_and_disarm(vehicle)
+                            land(vehicle)
                         except Exception as e:
                             print(f"Failed to land drone {i+1}: {e}")
                     
@@ -127,7 +143,15 @@ def main():
                         disarm_drones(drones)
                         break
                     elif sub_action == 'takeoff':
-                        break  
+                        target_altitude = float(input("Enter the target altitude for takeoff: "))
+                        
+                        # Arm and take off for each drone
+                        for i, vehicle in drones.items():
+                            try:
+                                print(f"Taking off drone {i+1}...")
+                                takeoff(vehicle, target_altitude)
+                            except Exception as e:
+                                print(f"Failed to take off drone {i+1}: {e}")                        
                 
                 elif sub_action == 'wait':
                     wait_time = int(input("Enter wait time in seconds: "))

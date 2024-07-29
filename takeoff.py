@@ -86,7 +86,7 @@ def ask_user_for_action(vehicle):
 
 
 if __name__ == "__main__":
-    connection_string = 'COM5'  # Replace with your connection string
+    connection_string = 'COM6'  # Replace with your connection string
 
     try:
         print(f"Connecting to vehicle on: {connection_string}")
@@ -95,7 +95,7 @@ if __name__ == "__main__":
         print("Armed: %s" % vehicle.armed)
         print("System status: %s" % vehicle.system_status.state)
 
-        target_altitude = 1.6  # Set your target altitude here
+        target_altitude = 5 # Set your target altitude here
         arm_and_ask_for_takeoff(vehicle, target_altitude)
 
 
