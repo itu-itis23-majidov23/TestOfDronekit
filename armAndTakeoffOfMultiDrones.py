@@ -1,11 +1,14 @@
 from dronekit import connect, VehicleMode
 import time
+import string
 
 
-serial_ports = ['COM6']
 drones = {}
 
-def connect_drones(serial_ports):
+def connect_drones():
+    ports = str(input('Enter the port(s) name(s): '))
+    ports = ports.replace(',', ' ').strip()
+    serial_ports = ports.split()
     for i, port in enumerate(serial_ports):
         try:
             print(f"Connecting to drone {i+1} on {port}...")
@@ -88,7 +91,7 @@ def disarm_drones(drones):
     print("All drones disarmed")
 
 def main():
-    connect_drones(serial_ports)
+    connect_drones()
     
     if not drones:
         print("No drones connected. Exiting.")
