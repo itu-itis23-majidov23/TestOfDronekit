@@ -2,6 +2,7 @@ from pymavlink import mavutil
 import time
 import serial.tools.list_ports
 import threading
+from pymavlink_move import handle_move_action
 
 drones = {}
 
@@ -127,11 +128,56 @@ def main():
             print("Invalid action. Please enter 'arm' or 'disconnect'.")
 
     while True:
-        action = input("Enter 'disarm' to disarm all drones or 'takeoff' to take off: ").strip().lower()
+        action = input("Enter 'disarm' to disarm all drones, 'takeoff' to take off and 'move' to move all drones: ").strip().lower()
         
         if action == 'disarm':
             disarm_drones(drones)
             break
+        
+        ### To be solved quickly in case of an error (Do not extract for now!)  
+        elif action == 'move':
+            handle_move_action(drones)
+            
+            while True:
+                sub_action = input("Enter 'land' to land the drones, 'wait' to wait at current altitude or 'move' to move a new location: ").strip().lower()
+                
+                if sub_action == 'land':
+                    for i, drone in drones.items():
+                        try:
+                            print(f"Landing drone {i+1}...")
+                            land(drone)
+                        except Exception as e:
+                            print(f"Failed to land drone {i+1}: {e}")
+                    
+                    sub_action = input("Enter 'disarm' to disarm the drones, 'takeoff' to take off again: ").strip().lower()
+                    if sub_action == 'disarm':
+                        disarm_drones(drones)
+                        break
+                    elif sub_action == 'takeoff':
+                        target_altitude = float(input("Enter the target altitude for takeoff: "))
+                        
+                        # Create and start a new thread for each drone takeoff
+                        threads = []
+                        for i, drone in drones.items():
+                            try:
+                                print(f"Taking off drone {i+1}...")
+                                t = threading.Thread(target=takeoff, args=(drone, target_altitude))
+                                threads.append(t)
+                                t.start()
+                            except Exception as e:
+                                print(f"Failed to take off drone {i+1}: {e}")
+                        
+                        # Wait for all threads to complete
+                        for t in threads:
+                            t.join()
+                
+                elif sub_action == 'wait':
+                    wait_time = int(input("Enter wait time in seconds: "))
+                    time.sleep(wait_time)
+                    
+                elif sub_action == 'move':
+                    handle_move_action(drones)
+                ### To be solved quickly in case of an error (Do not extract for now!)                            
         
         elif action == 'takeoff':
             target_altitude = float(input("Enter the target altitude for takeoff: "))
