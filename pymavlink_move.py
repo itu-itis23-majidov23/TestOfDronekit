@@ -9,8 +9,11 @@ turef30 = CRS("EPSG:5254")  # TUREF30
 lla_to_xyz_transformer = Transformer.from_crs(wgs84, turef30, always_xy=True)
 xyz_to_lla_transformer = Transformer.from_crs(turef30, wgs84, always_xy=True)
 
+
 # Conversion functions
-def lla_to_xyz(latitude: float, longitude: float, altitude: float) -> Tuple[float, float, float]: 
+def lla_to_xyz(
+    latitude: float, longitude: float, altitude: float
+) -> Tuple[float, float, float]:
     """
     Converts latitude, longitude, and altitude to XYZ coordinates.
     Uses WGS84 and TUREF30 coordinate systems for the conversion.
@@ -31,6 +34,7 @@ def lla_to_xyz(latitude: float, longitude: float, altitude: float) -> Tuple[floa
     """
     x, y, z = lla_to_xyz_transformer.transform(longitude, latitude, altitude)
     return x, y, z
+
 
 def xyz_to_lla(x: float, y: float, z: float) -> Tuple[float, float, float]:
     """
@@ -54,7 +58,10 @@ def xyz_to_lla(x: float, y: float, z: float) -> Tuple[float, float, float]:
     longitude, latitude, altitude = xyz_to_lla_transformer.transform(x, y, z)
     return latitude, longitude, altitude
 
-def get_drone_coordinates(drone: mavutil.mavlink_connection) -> Tuple[float, float, float]:
+
+def get_drone_coordinates(
+    drone: mavutil.mavlink_connection,
+) -> Tuple[float, float, float]:
     """
     Retrieve the current GPS coordinates of the drone.
 
@@ -65,13 +72,16 @@ def get_drone_coordinates(drone: mavutil.mavlink_connection) -> Tuple[float, flo
         Tuple[float, float, float]: The latitude, longitude, and altitude of the drone.
     """
     # Request GPS position
-    msg = drone.recv_match(type='GLOBAL_POSITION_INT', blocking=True)
+    msg = drone.recv_match(type="GLOBAL_POSITION_INT", blocking=True)
     latitude = msg.lat / 1e7
     longitude = msg.lon / 1e7
     altitude = msg.relative_alt / 1000.0
     return latitude, longitude, altitude
 
-def get_xyz_coordinates(drones: Dict[int, mavutil.mavlink_connection]) -> List[Tuple[float, float, float]]:
+
+def get_xyz_coordinates(
+    drones: Dict[int, mavutil.mavlink_connection]
+) -> List[Tuple[float, float, float]]:
     """
     Get the x, y, z coordinates for each drone.
 
@@ -88,7 +98,10 @@ def get_xyz_coordinates(drones: Dict[int, mavutil.mavlink_connection]) -> List[T
         xyz_coords.append((x, y, z))
     return xyz_coords
 
-def calculate_average_coordinates(xyz_coords: List[Tuple[float, float, float]]) -> Tuple[float, float, float]:
+
+def calculate_average_coordinates(
+    xyz_coords: List[Tuple[float, float, float]]
+) -> Tuple[float, float, float]:
     """
     Calculate the average of the x, y, z coordinates.
 
@@ -103,7 +116,10 @@ def calculate_average_coordinates(xyz_coords: List[Tuple[float, float, float]]) 
     avg_z = sum(coord[2] for coord in xyz_coords) / len(xyz_coords)
     return avg_x, avg_y, avg_z
 
-def move_drones(drone: mavutil.mavlink_connection, target_coordinates: Tuple[float, float, float]) -> None:
+
+def move_drones(
+    drone: mavutil.mavlink_connection, target_coordinates: Tuple[float, float, float]
+) -> None:
     """
     Move a drone to the target coordinates.
 
@@ -115,7 +131,18 @@ def move_drones(drone: mavutil.mavlink_connection, target_coordinates: Tuple[flo
     lat, lon, alt = xyz_to_lla(x, y, z)
     send_position_target_global_int(drone, lat, lon, alt)
 
-def send_position_target_global_int(drone: mavutil.mavlink_connection, lat: float, lon: float, alt: float, vx: float = 0, vy: float = 0, vz: float = 0, yaw: float = 0, yaw_rate: float = 0) -> None:
+
+def send_position_target_global_int(
+    drone: mavutil.mavlink_connection,
+    lat: float,
+    lon: float,
+    alt: float,
+    vx: float = 0,
+    vy: float = 0,
+    vz: float = 0,
+    yaw: float = 0,
+    yaw_rate: float = 0,
+) -> None:
     """
     Send a position target message to the drone using global coordinates.
 
@@ -130,16 +157,27 @@ def send_position_target_global_int(drone: mavutil.mavlink_connection, lat: floa
         yaw (float): Yaw angle in radians.
         yaw_rate (float): Yaw rate in radians/second.
     """
-    drone.mav.send(drone.mav.set_position_target_global_int_encode(
-        0,       # time_boot_ms (not used)
-        0, 0,    # target system, target component
-        mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT_INT, # frame
-        0b0000111111111000, # type_mask (only positions enabled)
-        int(lat * 1e7), int(lon * 1e7), alt, # lat, lon, alt
-        vx, vy, vz, # x, y, z velocity in m/s (not used)
-        0, 0, 0, # afx, afy, afz acceleration (not used)
-        yaw, yaw_rate # yaw, yaw_rate (not used)
-    ))
+    drone.mav.send(
+        drone.mav.set_position_target_global_int_encode(
+            0,  # time_boot_ms (not used)
+            0,
+            0,  # target system, target component
+            mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT_INT,  # frame
+            0b0000111111111000,  # type_mask (only positions enabled)
+            int(lat * 1e7),
+            int(lon * 1e7),
+            alt,  # lat, lon, alt
+            vx,
+            vy,
+            vz,  # x, y, z velocity in m/s (not used)
+            0,
+            0,
+            0,  # afx, afy, afz acceleration (not used)
+            yaw,
+            yaw_rate,  # yaw, yaw_rate (not used)
+        )
+    )
+
 
 def handle_move_action(drones: Dict[int, mavutil.mavlink_connection]) -> None:
     """
@@ -150,10 +188,18 @@ def handle_move_action(drones: Dict[int, mavutil.mavlink_connection]) -> None:
     """
     xyz_coords = get_xyz_coordinates(drones)
     avg_x, avg_y, avg_z = calculate_average_coordinates(xyz_coords)
-    
-    target_coordinates_input = tuple(map(float, input("Enter the target coordinates for move (X, Y, Z): ").split(',')))
-    target_coordinates = (avg_x + target_coordinates_input[0], avg_y + target_coordinates_input[1], avg_z + target_coordinates_input[2])
-    
+
+    target_coordinates_input = tuple(
+        map(
+            float, input("Enter the target coordinates for move (X, Y, Z): ").split(",")
+        )
+    )
+    target_coordinates = (
+        avg_x + target_coordinates_input[0],
+        avg_y + target_coordinates_input[1],
+        avg_z + target_coordinates_input[2],
+    )
+
     threads = []
     for i, drone in drones.items():
         try:
