@@ -189,6 +189,13 @@ def handle_move_action(drones: Dict[int, mavutil.mavlink_connection]) -> None:
     xyz_coords = get_xyz_coordinates(drones)
     avg_x, avg_y, avg_z = calculate_average_coordinates(xyz_coords)
 
+    print("Current coordinates of each drone:")
+    for i, (x, y, z) in enumerate(xyz_coords, start=1):
+        lat, lon, alt = xyz_to_lla(x, y, z)
+        print(f"Drone {i}: Latitude={lat}, Longitude={lon}, Altitude={alt}")
+
+    print(f"\nCalculated average coordinates (absolute): ({avg_x}, {avg_y}, {avg_z})")
+
     target_coordinates_input = tuple(
         map(
             float, input("Enter the target coordinates for move (X, Y, Z): ").split(",")
@@ -199,6 +206,9 @@ def handle_move_action(drones: Dict[int, mavutil.mavlink_connection]) -> None:
         avg_y + target_coordinates_input[1],
         avg_z + target_coordinates_input[2],
     )
+
+    print(f"\nTarget coordinates (relative to average): {target_coordinates_input}")
+    print(f"Final target coordinates (absolute): {target_coordinates}")
 
     threads = []
     for i, drone in drones.items():
