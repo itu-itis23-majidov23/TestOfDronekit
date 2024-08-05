@@ -80,10 +80,43 @@ def connect_drones() -> None:
             print(f"Failed to connect to drone {i+1} on {port}: {e}")
 
 
+def set_parameter(drone, param_id, param_value):
+    """
+    Set a parameter on the drone.
+
+    Args:
+        drone: MAVLink connection object.
+        param_id: The parameter id (name) as string.
+        param_value: The parameter value to set.
+
+    Returns:
+        None
+    """
+    param_id = param_id.encode("utf-8")
+    drone.mav.param_set_send(
+        drone.target_system,
+        drone.target_component,
+        param_id,
+        float(param_value),
+        mavutil.mavlink.MAV_PARAM_TYPE_REAL32,
+    )
+
+    # Wait for the parameter to be set
+    while True:
+        ack = drone.recv_match(type="PARAM_VALUE", blocking=True)
+        if ack and ack.param_id.decode("utf-8") == param_id.decode("utf-8"):
+            print(f"Parameter {param_id.decode('utf-8')} set to {ack.param_value}")
+            break
+
+
 def arm_drones(drones):
     for i, drone in drones.items():
         try:
+            # Set the disarm delay parameter before arming
+            desired_disarm_delay = 30  # Adjust this value as needed
+            set_parameter(drone, "DISARM_DELAY", desired_disarm_delay)
             print(f"Arming drone {i+1}...")
+
             drone.mav.command_long_send(
                 drone.target_system,
                 drone.target_component,
