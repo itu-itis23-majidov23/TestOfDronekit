@@ -39,14 +39,19 @@ def set_mode(drone: mavutil.mavlink_connection, mode: str) -> None:
     ack = None
     while not ack:
         ack = drone.recv_match(type="COMMAND_ACK", blocking=True)
-        ack_type = ack.type if ack else None
-        ack_result = ack.result if ack else None
-        if ack and ack.command == mavutil.mavlink.MAV_CMD_DO_SET_MODE:
-            if ack_result == mavutil.mavlink.MAV_RESULT_ACCEPTED:
-                print(f"Mode change to {mode} accepted")
-            else:
-                print(f"Mode change to {mode} failed with result {ack_result}")
-            break
+        if ack:
+            try:
+                ack_result = ack.result
+                if ack.command == mavutil.mavlink.MAV_CMD_DO_SET_MODE:
+                    if ack_result == mavutil.mavlink.MAV_RESULT_ACCEPTED:
+                        print(f"Mode change to {mode} accepted")
+                    else:
+                        print(f"Mode change to {mode} failed with result {ack_result}")
+                    break
+            except AttributeError as e:
+                print(f"Error processing ACK message: {e}")
+        else:
+            print("No ACK received, retrying...")
 
 
 def connect_drones() -> None:
