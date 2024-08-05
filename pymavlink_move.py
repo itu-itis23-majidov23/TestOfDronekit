@@ -10,6 +10,47 @@ lla_to_xyz_transformer = Transformer.from_crs(wgs84, turef30, always_xy=True)
 xyz_to_lla_transformer = Transformer.from_crs(turef30, wgs84, always_xy=True)
 
 
+def set_mode(drone: mavutil.mavlink_connection, mode: str) -> None:
+    """
+    Set the flight mode of the drone.
+
+    Args:
+        drone (mavutil.mavlink_connection): The drone connection.
+        mode (str): The flight mode to set (e.g., "GUIDED", "LOITER", "RTL").
+    """
+    # Get the mode ID
+    if mode not in drone.mode_mapping():
+        print(f"Unknown mode: {mode}")
+        print(f"Available modes: {list(drone.mode_mapping().keys())}")
+        return
+
+    mode_id = drone.mode_mapping()[mode]
+
+    # Set the mode
+    drone.mav.set_mode_send(
+        drone.target_system, mavutil.mavlink.MAV_MODE_FLAG_CUSTOM_MODE_ENABLED, mode_id
+    )
+
+    # Wait for ACK command
+    # MAVLink requires an ACK from the drone to confirm the mode change
+    ack = None
+    while not ack:
+        ack = drone.recv_match(type="COMMAND_ACK", blocking=True)
+        if ack:
+            try:
+                ack_result = ack.result
+                if ack.command == mavutil.mavlink.MAV_CMD_DO_SET_MODE:
+                    if ack_result == mavutil.mavlink.MAV_RESULT_ACCEPTED:
+                        print(f"Mode change to {mode} accepted")
+                    else:
+                        print(f"Mode change to {mode} failed with result {ack_result}")
+                    break
+            except AttributeError as e:
+                print(f"Error processing ACK message: {e}")
+        else:
+            print("No ACK received, retrying...")
+
+
 # Conversion functions
 def lla_to_xyz(
     latitude: float, longitude: float, altitude: float
@@ -59,24 +100,35 @@ def xyz_to_lla(x: float, y: float, z: float) -> Tuple[float, float, float]:
     return latitude, longitude, altitude
 
 
+def request_data_stream(drone, rate=1):
+    drone.mav.request_data_stream_send(
+        drone.target_system,
+        drone.target_component,
+        mavutil.mavlink.MAV_DATA_STREAM_ALL,
+        rate,
+        1,
+    )
+    print("Requested data stream")
+
+
 def get_drone_coordinates(
     drone: mavutil.mavlink_connection,
 ) -> Tuple[float, float, float]:
     """
-    Retrieve the current GPS coordinates of the drone.
+    Get the current latitude, longitude, and altitude of the drone.
 
     Args:
         drone (mavutil.mavlink_connection): The drone connection.
 
     Returns:
-        Tuple[float, float, float]: The latitude, longitude, and altitude of the drone.
+        Tuple[float, float, float]: Latitude, longitude, and altitude.
     """
-    # Request GPS position
+    request_data_stream(drone)
     msg = drone.recv_match(type="GLOBAL_POSITION_INT", blocking=True)
-    latitude = msg.lat / 1e7
-    longitude = msg.lon / 1e7
-    altitude = msg.relative_alt / 1000.0
-    return latitude, longitude, altitude
+    lat = msg.lat / 1e7
+    lon = msg.lon / 1e7
+    alt = msg.relative_alt / 1000.0  # Convert from mm to meters
+    return (lat, lon, alt)
 
 
 def get_xyz_coordinates(
@@ -179,15 +231,20 @@ def send_position_target_global_int(
     )
 
 
-def handle_move_action(drones: Dict[int, mavutil.mavlink_connection]) -> None:
+def handle_move_action(
+    drones: Dict[int, mavutil.mavlink_connection], xyz_coords, avg_x, avg_y, avg_z
+) -> None:
     """
     Handle the move action for multiple drones.
 
     Args:
         drones (Dict[int, mavutil.mavlink_connection]): Dictionary of drone connections.
     """
-    xyz_coords = get_xyz_coordinates(drones)
-    avg_x, avg_y, avg_z = calculate_average_coordinates(xyz_coords)
+    target_coordinates_input = tuple(
+        map(
+            float, input("Enter the target coordinates for move (X, Y, Z): ").split(",")
+        )
+    )
 
     print("Current coordinates of each drone:")
     for i, (x, y, z) in enumerate(xyz_coords, start=1):
@@ -196,11 +253,6 @@ def handle_move_action(drones: Dict[int, mavutil.mavlink_connection]) -> None:
 
     print(f"\nCalculated average coordinates (absolute): ({avg_x}, {avg_y}, {avg_z})")
 
-    target_coordinates_input = tuple(
-        map(
-            float, input("Enter the target coordinates for move (X, Y, Z): ").split(",")
-        )
-    )
     target_coordinates = (
         avg_x + target_coordinates_input[0],
         avg_y + target_coordinates_input[1],
